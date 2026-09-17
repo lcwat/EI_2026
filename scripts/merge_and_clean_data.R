@@ -3,6 +3,7 @@
 # load libraries ----------------------------------------------------------
 
 library(tidyverse)
+library(janitor)
 
 # load data ---------------------------------------------------------------
 
@@ -11,12 +12,7 @@ folder_name <- 'data'
 
 files <- list.files(folder_name, full.names = TRUE)
 
-myd <- read_csv(files[1])
-
-myd <- myd |> 
-  select(
-    `Prolific Worker ID*`:frameRate, Block:EI_Total_Points, EI_Task.stopped
-  )
+pids <- str_extract(files, "(?<=/).+(?=_EI)")
 
 # remove empty rows (tutorial level, net empty)
 
@@ -29,16 +25,39 @@ myd <- myd |>
 # loading loop
 for (i in 1:length(files)) {
   
+  myd <- read_csv(files[i], show_col_types = F)
+  
+  myd <- myd |> 
+    select(
+      `Prolific Worker ID*`:frameRate, Block:EI_Total_Points, EI_Task.stopped
+    )
+  
+  # completion time
+  ct <- max(myd$EI_Task.stopped, na.rm = TRUE)
+  
+  clean_myd <- myd |> 
+    select(-EI_Task.stopped) |> 
+    drop_na()
+  
+  colnames(clean_myd) <- make_clean_names(colnames(clean_myd))
+  
+  clean_myd <- clean_myd |> 
+    add_column(pid = pids[i], completion_time = ct) |> 
+    relocate(pid)
+  
   if (i == 1) {
-    myd <- read_csv(files[i], show_col_types = FALSE)
+    d <- clean_myd
   }
   else {
-    myd_add <- read_csv(files[i], show_col_types = FALSE)
-    
     # append to existing dataset
-    myd <- bind_rows(myd, myd_add)
+    d <- bind_rows(d, clean_myd)
   }
   
   print(i)
 }
 
+summary(d)
+
+dir.create('data/cleaned')
+
+write_csv(d, 'data/cleaned/ei_35_pp_cleaned.csv')
