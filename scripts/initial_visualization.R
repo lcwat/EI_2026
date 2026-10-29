@@ -33,7 +33,7 @@ myd |>
   ) |> 
   ggplot(aes(x = mean_irt, y = completion_time, color = as.factor(ei_power))) + 
   geom_point(shape = 1) + 
-  geom_smooth(se = F) + 
+  geom_smooth(method = 'loess', se = F) + 
   theme_bw() + 
   facet_wrap(~ei_power)
   
